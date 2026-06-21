@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INSA AeroDesign Lab — Avant-Projet Avion de Ligne</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:      #040c14;
+  --panel:   #071420;
+  --border:  #0d3a55;
+  --border2: #0a2a3d;
+  --cyan:    #00d4ff;
+  --cyan2:   #007799;
+  --green:   #00ff88;
+  --orange:  #ff8c42;
+  --red:     #ff2255;
+  --text:    #b8dde8;
+  --dim:     #3d6a7a;
+  --dim2:    #1a3a4a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Share Tech Mono',monospace;
+}
+
+/* ── SCANLINES ── */
+body::after {
+  content:'';
+  position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,transparent 2px,
+    rgba(0,212,255,.018) 2px,rgba(0,212,255,.018) 4px
+  );
+}
+
+/* ── HEADER ── */
+header {
+  height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(90deg,#040c14,#071e30,#040c14);
+  position:relative;z-index:10;
+  flex-shrink:0;
+}
+.logo {
+  font-family:'Orbitron',monospace;
+  font-size:1.1rem;font-weight:900;
+  color:var(--cyan);letter-spacing:5px;
+  text-shadow:0 0 22px rgba(0,212,255,.9);
+}
+.logo em{color:var(--green);font-style:normal;}
+.hdr-mid {
+  font-size:.6rem;color:var(--dim);letter-spacing:3px;
+  text-align:center;
+}
+.hdr-right {
+  display:flex;gap:18px;align-items:center;font-size:.6rem;color:var(--dim);
+}
+.dot {
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 8px var(--green);
+  animation:blink 2s ease-in-out infinite;margin-right:5px;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+/* ── MAIN LAYOUT ── */
+.shell {
+  height:calc(100vh - 52px);
+  display:grid;
+  grid-template-columns:290px 1fr 270px;
+}
+
+/* ── SHARED PANEL ── */
+.panel {
+  border-right:1px solid var(--border);
+  background:var(--panel);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.panel:last-child{border-right:none;}
+.ptitle {
+  font-family:'Orbitron',monospace;
+  font-size:.55rem;letter-spacing:3px;color:var(--cyan);
+  padding:9px 14px;
+  border-bottom:1px solid var(--border2);
+  background:rgba(0,212,255,.03);
+  flex-shrink:0;
+}
+.ptitle em{color:var(--green);font-style:normal;}
+.scroll{overflow-y:auto;flex:1;}
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ── SLIDERS ── */
+.sg{padding:12px 14px;border-bottom:1px solid var(--border2);}
+.slabel{
+  display:flex;justify-content:space-between;
+  font-size:.65rem;margin-bottom:7px;
+}
+.slabel .k{color:var(--dim);}
+.slabel .v{color:var(--cyan);text-shadow:0 0 8px rgba(0,212,255,.5);}
+input[type=range]{
+  width:100%;height:3px;
+  -webkit-appearance:none;appearance:none;
+  background:linear-gradient(90deg,var(--cyan) var(--p,50%),var(--dim2) var(--p,50%));
+  border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,.8);cursor:pointer;
+}
+
+/* ── TOGGLE ── */
+.trow{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--border2);
+}
+.tlabel{font-size:.65rem;line-height:1.4;}
+.tlabel small{font-size:.55rem;color:var(--dim);display:block;}
+.tgl{
+  width:42px;height:20px;border-radius:10px;
+  border:1px solid var(--border);background:#0a1e2e;
+  cursor:pointer;position:relative;transition:background .3s;flex-shrink:0;
+}
+.tgl.on{background:var(--green);border-color:var(--green);box-shadow:0 0 10px rgba(0,255,136,.4);}
+.tgl::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:14px;height:14px;border-radius:50%;background:#fff;
+  transition:transform .3s;
+}
+.tgl.on::after{transform:translateX(22px);}
+
+/* ── LAUNCH BUTTON ── */
+.lbtn{
+  margin:12px 14px;padding:11px;
+  font-family:'Orbitron',monospace;font-size:.7rem;letter-spacing:3px;
+  background:transparent;border:1.5px solid var(--cyan);color:var(--cyan);
+  cursor:pointer;text-transform:uppercase;
+  transition:all .25s;position:relative;overflow:hidden;width:calc(100% - 28px);
+}
+.lbtn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,var(--cyan),var(--green));
+  transform:translateX(-110%);transition:transform .3s;z-index:0;
+}
+.lbtn span{position:relative;z-index:1;}
+.lbtn:hover{color:var(--bg);box-shadow:0 0 25px rgba(0,212,255,.5);}
+.lbtn:hover::before{transform:translateX(0);}
+.lbtn.sim{border-color:var(--green);color:var(--green);animation:glow .4s infinite alternate;}
+@keyframes glow{from{box-shadow:0 0 8px rgba(0,255,136,.4);}to{box-shadow:0 0 25px rgba(0,255,136,.8);}}
+
+/* ── MISSIONS ── */
+.mc{
+  margin:0 12px 8px;padding:9px 10px;
+  border:1px solid var(--border2);border-radius:3px;
+  cursor:pointer;transition:border-color .2s;font-size:.6rem;
+}
+.mc:hover{border-color:var(--cyan);}
+.mc.active{border-color:var(--cyan);background:rgba(0,212,255,.04);}
+.mc.done{border-color:var(--green);background:rgba(0,255,136,.05);}
+.mc .mn{font-family:'Orbitron',monospace;font-size:.55rem;color:var(--cyan);margin-bottom:3px;}
+.mc .md{color:var(--dim);line-height:1.45;}
+.mc .ms{color:var(--dim);margin-top:4px;font-size:.55rem;}
+.mc.done .ms{color:var(--green);}
+
+/* ── CENTER ── */
+.center{border-left:1px solid var(--border);border-right:1px solid var(--border);}
+#cvs-wrap{flex:1;position:relative;min-height:0;}
+#cvs-wrap canvas{display:block;}
+.cpane{
+  height:155px;border-top:1px solid var(--border);flex-shrink:0;
+  padding:0 14px 10px;
+}
+.cpane .ptitle{padding:8px 0 6px;border-bottom:none;margin:0 -14px 6px;padding-left:14px;}
+
+/* ── TELEMETRY ── */
+.mb{padding:11px 14px;border-bottom:1px solid var(--border2);}
+.mlabel{font-size:.55rem;color:var(--dim);letter-spacing:2px;margin-bottom:3px;}
+.mval{
+  font-family:'Orbitron',monospace;font-size:1.35rem;
+  color:var(--cyan);text-shadow:0 0 14px rgba(0,212,255,.5);line-height:1;
+}
+.mval.warn{color:var(--orange);text-shadow:0 0 14px rgba(255,140,66,.5);}
+.mval.crit{color:var(--red);text-shadow:0 0 14px rgba(255,34,85,.5);}
+.mval.ok{color:var(--green);text-shadow:0 0 14px rgba(0,255,136,.5);}
+.munit{font-size:.55rem;color:var(--dim);margin-top:1px;}
+.gbar{height:3px;background:var(--dim2);border-radius:2px;margin-top:6px;overflow:hidden;}
+.gfill{height:100%;border-radius:2px;transition:width .6s ease;}
+.srow{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--border2);
+}
+.srow .sk{font-size:.55rem;color:var(--dim);letter-spacing:2px;}
+.srow .sv{font-family:'Orbitron',monospace;font-size:1.1rem;color:var(--green);text-shadow:0 0 10px rgba(0,255,136,.5);}
+.fbbox{
+  margin:12px 14px;padding:10px 11px;
+  border:1px solid var(--border2);border-radius:3px;
+  font-size:.62rem;line-height:1.65;
+  background:rgba(0,0,0,.25);flex:1;
+}
+.fbhdr{font-family:'Orbitron',monospace;font-size:.5rem;color:var(--green);letter-spacing:2px;margin-bottom:7px;}
+.fbtxt{color:var(--text);}
+.fbtxt.warn{color:var(--orange);}
+.fbtxt.crit{color:var(--red);}
+.fbtxt.ok{color:var(--green);}
+
+/* ── ITER PROGRESS ── */
+.ibar-wrap{height:3px;background:var(--dim2);position:relative;overflow:hidden;flex-shrink:0;}
+.ibar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:0%;transition:width .1s linear;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">INSA <em>AERO</em>DESIGN <em>LAB</em></div>
+  <div class="hdr-mid">SIMULATEUR AVANT-PROJET · AVION DE LIGNE MODERNE · CYCLE BRAYTON-JOULE</div>
+  <div class="hdr-right">
+    <div><span class="dot"></span>SYSTÈME ACTIF</div>
+    <div id="hdr-iter">ITER 0/15</div>
+    <div id="hdr-clk">--:--:--</div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <!-- ═══ LEFT ═══ -->
+  <div class="panel">
+    <div class="ptitle">▸ PARAMÈTRES <em>MISSION</em></div>
+    <div class="ibar-wrap"><div class="ibar-fill" id="ibar"></div></div>
+    <div class="scroll">
+
+      <div class="sg">
+        <div class="slabel"><span class="k">N<sub>PAX</sub> — Passagers</span><span class="v" id="v-npax">200</span></div>
+        <input type="range" id="s-npax" min="100" max="500" value="200" step="10">
+      </div>
+      <div class="sg">
+        <div class="slabel"><span class="k">L — Distance (km)</span><span class="v" id="v-dist">5 000</span></div>
+        <input type="range" id="s-dist" min="1000" max="15000" value="5000" step="100">
+      </div>
+      <div class="sg">
+        <div class="slabel"><span class="k">f — Finesse aérodyn.</span><span class="v" id="v-fin">18.0</span></div>
+        <input type="range" id="s-fin" min="8" max="25" value="18" step="0.5">
+      </div>
+      <div class="sg">
+        <div class="slabel"><span class="k">η — Rendement moteur</span><span class="v" id="v-eta">0.40</span></div>
+        <input type="range" id="s-eta" min="0.20" max="0.65" value="0.40" step="0.01">
+      </div>
+
+      <div class="trow">
+        <div class="tlabel">
+          MODE MATÉRIAUX AVANCÉS
+          <small>CFRP cellule −15% &nbsp;|&nbsp; η +10%</small>
+        </div>
+        <div class="tgl" id="tgl-mat"></div>
+      </div>
+
+      <button class="lbtn" id="lbtn" onclick="doLaunch()"><span>▶ LANCER SIMULATION</span></button>
+
+      <div class="ptitle" style="margin-top:4px">▸ MISSIONS <em>ACTIVES</em></div>
+
+      <div class="mc" id="mc0" onclick="pickMission(0)">
+        <div class="mn">🌊 DÉFI TRANSATLANTIQUE</div>
+        <div class="md">Atteindre 6 000 km avec moins de 100 t de carburant.</div>
+        <div class="ms" id="ms0">▷ EN ATTENTE</div>
+      </div>
+      <div class="mc" id="mc1" onclick="pickMission(1)">
+        <div class="mn">✈ JUMBO CHALLENGE</div>
+        <div class="md">400 pax sur 8 000 km, masse totale &lt; 350 t.</div>
+        <div class="ms" id="ms1">▷ EN ATTENTE</div>
+      </div>
+      <div class="mc" id="mc2" onclick="pickMission(2)">
+        <div class="mn">🌿 GREEN PIONEER</div>
+        <div class="md">Finesse ≥ 22 et rendement ≥ 0.55 simultanément.</div>
+        <div class="ms" id="ms2">▷ EN ATTENTE</div>
+      </div>
+      <div class="mc" id="mc3" onclick="pickMission(3)">
+        <div class="mn">🏆 ULTRA LONG HAUL</div>
+        <div class="md">14 000 km sans dépasser 500 t de masse totale.</div>
+        <div class="ms" id="ms3">▷ EN ATTENTE</div>
+      </div>
+      <div style="height:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ CENTER ═══ -->
+  <div class="panel center" style="border:none;">
+    <div class="ptitle">▸ VISUALISATION AÉRONEF <em>TEMPS RÉEL</em> — EFFETS PARTICULES RÉACTEURS</div>
+    <div id="cvs-wrap"></div>
+    <div class="cpane">
+      <div class="ptitle">▸ CONVERGENCE MASSE <em>POINT FIXE</em> — 15 ITÉRATIONS</div>
+      <canvas id="cvchart"></canvas>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT ═══ -->
+  <div class="panel">
+    <div class="ptitle">▸ TÉLÉMÉTRIE <em>TEMPS RÉEL</em></div>
+    <div class="scroll">
+      <div class="mb">
+        <div class="mlabel">MASSE TOTALE</div>
+        <div class="mval" id="m-tot">—</div>
+        <div class="munit">TONNES</div>
+        <div class="gbar"><div class="gfill" id="g-tot" style="width:0;background:var(--cyan)"></div></div>
+      </div>
+      <div class="mb">
+        <div class="mlabel">MASSE CARBURANT</div>
+        <div class="mval" id="m-fue">—</div>
+        <div class="munit">TONNES</div>
+        <div class="gbar"><div class="gfill" id="g-fue" style="width:0;background:var(--orange)"></div></div>
+      </div>
+      <div class="mb">
+        <div class="mlabel">PUISSANCE PROPULSIVE</div>
+        <div class="mval" id="m-pwr">—</div>
+        <div class="munit">MÉGAWATTS</div>
+        <div class="gbar"><div class="gfill" id="g-pwr" style="width:0;background:var(--green)"></div></div>
+      </div>
+      <div class="mb">
+        <div class="mlabel">POUSSÉE TOTALE</div>
+        <div class="mval" id="m-thr">—</div>
+        <div class="munit">kN</div>
+      </div>
+      <div class="mb">
+        <div class="mlabel">MASSE MOTEURS</div>
+        <div class="mval" id="m-eng">—</div>
+        <div class="munit">TONNES</div>
+      </div>
+      <div class="mb">
+        <div class="mlabel">MASSE CELLULE</div>
+        <div class="mval" id="m-cel">—</div>
+        <div class="munit">TONNES</div>
+      </div>
+      <div class="srow">
+        <div class="sk">SCORE INGÉNIEUR</div>
+        <div class="sv" id="escore">0</div>
+      </div>
+      <div class="fbbox">
+        <div class="fbhdr">⬡ RAPPORT INGÉNIEUR EN CHEF</div>
+        <div class="fbtxt" id="fbtext">Configurez les paramètres ci-contre et lancez la simulation. Le moteur de point-fixe effectuera 15 itérations pour converger vers la masse d'équilibre.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════
+const PCI   = 43e6;   // J/kg — kérosène Jet-A
+const G     = 9.81;   // m/s²
+const VCRUISE = 248;  // m/s ≈ 893 km/h
+const NITER = 15;
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const S = {
+  npax:200, dist:5000, fin:18, eta:0.40,
+  adv:false,
+  busy:false,
+  res:null,
+  score:0,
+  missions:[false,false,false,false],
+  activeMission:-1,
+};
+
+// ═══════════════════════════════════════════
+// SLIDERS
+// ═══════════════════════════════════════════
+const SLIDERS = [
+  { id:'s-npax', vid:'v-npax', key:'npax', fmt:v=>Math.round(v).toLocaleString('fr') },
+  { id:'s-dist', vid:'v-dist', key:'dist', fmt:v=>Math.round(v).toLocaleString('fr') },
+  { id:'s-fin',  vid:'v-fin',  key:'fin',  fmt:v=>(+v).toFixed(1) },
+  { id:'s-eta',  vid:'v-eta',  key:'eta',  fmt:v=>(+v).toFixed(2) },
+];
+SLIDERS.forEach(({id,vid,key,fmt})=>{
+  const el=document.getElementById(id);
+  const refresh=()=>{
+    const min=+el.min,max=+el.max,val=+el.value;
+    el.style.setProperty('--p',((val-min)/(max-min)*100).toFixed(1)+'%');
+    document.getElementById(vid).textContent=fmt(val);
+    S[key]=+val;
+  };
+  el.addEventListener('input',refresh);
+  refresh();
+});
+
+// toggle
+document.getElementById('tgl-mat').addEventListener('click',function(){
+  S.adv=!S.adv;
+  this.classList.toggle('on',S.adv);
+});
+
+// missions
+function pickMission(i){
+  S.activeMission=i;
+  document.querySelectorAll('.mc').forEach((c,j)=>c.classList.toggle('active',j===i));
+}
+
+// ═══════════════════════════════════════════
+// PHYSICS — FIXED POINT LOOP
+// ═══════════════════════════════════════════
+function runPhysics(){
+  let {npax,dist,fin,eta,adv}=S;
+  const cf = adv ? 0.85 : 1.0;
+  const etaEff = Math.min(eta*(adv?1.10:1.0), 0.99);
+
+  const M_cell = Math.max(0,(485*npax - 35000)*cf);  // kg, régression stat.
+  const M_pax  = npax*100;                            // kg
+
+  let M_mot=5000, M_fue=10000;
+  const hist=[];
+
+  for(let i=0;i<NITER;i++){
+    const M_tot = M_cell + M_pax + M_mot + M_fue;
+    const W     = M_tot * G;          // N
+    const T     = W / fin;            // Traînée ≡ Poussée en palier
+    const F     = T;                  // kN
+    M_mot       = (F/1000)*20;        // 20 kg/kN
+    const E     = T*(dist*1000);      // Énergie (J)
+    M_fue       = E/(PCI*etaEff);     // kg
+    hist.push(M_tot/1000);            // tonnes → historique
+  }
+
+  const M_tot  = M_cell+M_pax+M_mot+M_fue;
+  const W      = M_tot*G;
+  const T_fin  = W/fin;
+  const P_MW   = (T_fin*VCRUISE)/1e6;
+  const conv   = Math.abs(hist[NITER-1]-hist[NITER-2])<0.5;
+
+  return {
+    M_tot:   M_tot/1000,
+    M_fue:   M_fue/1000,
+    M_mot:   M_mot/1000,
+    M_cell:  M_cell/1000,
+    F_kN:    T_fin/1000,
+    P_MW,
+    hist,
+    conv,
+  };
+}
+
+// ═══════════════════════════════════════════
+// CONVERGENCE CHART
+// ═══════════════════════════════════════════
+let chart;
+function initChart(){
+  const canvas=document.getElementById('cvchart');
+  const cpane=document.querySelector('.cpane');
+  canvas.height=cpane.offsetHeight-38;
+  const ctx=canvas.getContext('2d');
+  chart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:Array.from({length:NITER},(_,i)=>i+1),
+      datasets:[{
+        label:'Masse totale (t)',
+        data:Array(NITER).fill(null),
+        borderColor:'#00d4ff',
+        backgroundColor:'rgba(0,212,255,.06)',
+        borderWidth:2,
+        pointRadius:4,
+        pointBackgroundColor:'#00d4ff',
+        pointBorderColor:'#071420',
+        pointBorderWidth:1.5,
+        tension:.35,
+        fill:true,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:200},
+      plugins:{legend:{display:false},tooltip:{
+        backgroundColor:'#071420',
+        borderColor:'#0d3a55',borderWidth:1,
+        titleColor:'#00d4ff',bodyColor:'#b8dde8',
+        titleFont:{family:'Share Tech Mono',size:10},
+        bodyFont:{family:'Share Tech Mono',size:10},
+      }},
+      scales:{
+        x:{grid:{color:'rgba(13,58,85,.5)'},ticks:{color:'#3d6a7a',font:{family:'Share Tech Mono',size:9}},title:{display:true,text:'ITÉRATION',color:'#3d6a7a',font:{family:'Share Tech Mono',size:9}}},
+        y:{grid:{color:'rgba(13,58,85,.5)'},ticks:{color:'#3d6a7a',font:{family:'Share Tech Mono',size:9}},title:{display:true,text:'TONNES',color:'#3d6a7a',font:{family:'Share Tech Mono',size:9}}}
+      }
+    }
+  });
+}
+
+function animChart(hist){
+  chart.data.datasets[0].data=Array(NITER).fill(null);
+  chart.update('none');
+  let i=0;
+  const t=setInterval(()=>{
+    chart.data.datasets[0].data[i]=hist[i];
+    chart.update('none');
+    document.getElementById('hdr-iter').textContent=`ITER ${i+1}/15`;
+    document.getElementById('ibar').style.width=((i+1)/NITER*100)+'%';
+    i++;
+    if(i>=NITER){
+      clearInterval(t);
+      document.getElementById('ibar').style.width='100%';
+      setTimeout(()=>{document.getElementById('ibar').style.width='0%';},800);
+    }
+  },100);
+}
+
+// ═══════════════════════════════════════════
+// TELEMETRY
+// ═══════════════════════════════════════════
+function setVal(id,v,cls){
+  const el=document.getElementById(id);
+  el.textContent=v;
+  el.className='mval'+(cls?' '+cls:'');
+}
+function setGauge(id,pct,color){
+  const el=document.getElementById(id);
+  el.style.width=Math.min(pct,100)+'%';
+  if(color)el.style.background=color;
+}
+
+function updateTelemetry(r){
+  const mtCls=r.M_tot>550?'crit':r.M_tot>400?'warn':'ok';
+  setVal('m-tot',r.M_tot.toFixed(1),mtCls);
+  setGauge('g-tot',(r.M_tot/600)*100,r.M_tot>550?'var(--red)':r.M_tot>400?'var(--orange)':'var(--cyan)');
+
+  const mfCls=r.M_fue>150?'crit':r.M_fue>80?'warn':'ok';
+  setVal('m-fue',r.M_fue.toFixed(1),mfCls);
+  setGauge('g-fue',(r.M_fue/200)*100,r.M_fue>150?'var(--red)':'var(--orange)');
+
+  setVal('m-pwr',r.P_MW.toFixed(1),'ok');
+  setGauge('g-pwr',(r.P_MW/250)*100,'var(--green)');
+  setVal('m-thr',r.F_kN.toFixed(0));
+  setVal('m-eng',r.M_mot.toFixed(1));
+  setVal('m-cel',r.M_cell.toFixed(1));
+
+  genFeedback(r);
+  checkMissions(r);
+  computeScore(r);
+}
+
+// ═══════════════════════════════════════════
+// FEEDBACK
+// ═══════════════════════════════════════════
+function genFeedback(r){
+  const el=document.getElementById('fbtext');
+  const msgs=[];
+  let cls='ok';
+
+  if(r.M_tot>600){
+    msgs.push('⚠ ALERTE STRUCTURELLE : Masse totale '+r.M_tot.toFixed(0)+' t — dépassement critique. L\'aéronef ne peut pas décoller. Réduisez la portée ou le nombre de passagers.');
+    cls='crit';
+  } else if(r.M_tot>450){
+    msgs.push('⚡ AVERTISSEMENT : Masse élevée ('+r.M_tot.toFixed(0)+' t). Envisagez un allégement structurel ou une réduction du payload.');
+    if(cls!=='crit')cls='warn';
+  } else {
+    msgs.push('✅ Masse totale nominale : '+r.M_tot.toFixed(1)+' t. Configuration aéronef dans les enveloppes de vol conventionnelles.');
+  }
+
+  if(S.fin<12){
+    msgs.push('📐 Finesse critique ('+S.fin+') — traînée rédhibitoire. Optimisez le profil aile et installez des winglets Blended.');
+    if(cls!=='crit')cls='warn';
+  } else if(S.fin>=20){
+    msgs.push('🔬 Finesse élevée ('+S.fin+') — supercritique. Architecture NLF ou aile composite préconisée pour tenir cette performance.');
+  }
+
+  if(r.M_fue>150){
+    msgs.push('🛢 Surconsommation : '+r.M_fue.toFixed(1)+' t de Jet-A. Upgrade motorisation LEAP-1B ou GEnX-2B recommandé.');
+    if(cls!=='crit')cls='warn';
+  }
+
+  if(r.conv){
+    msgs.push('🔁 Convergence numérique atteinte (δm < 0.5 t entre iter 14→15). Solution point-fixe stable.');
+  } else {
+    msgs.push('⚠ Convergence lente détectée. Vérifiez la cohérence physique des paramètres entrées.');
+  }
+
+  if(S.adv){
+    msgs.push('🧬 Matériaux avancés actifs : CFRP sur fuselage & aile (−15% masse cellule), turbofan haute pression (η +10%).');
+  }
+
+  el.innerHTML=msgs.join('<br><br>');
+  el.className='fbtxt '+cls;
+}
+
+// ═══════════════════════════════════════════
+// MISSIONS CHECK
+// ═══════════════════════════════════════════
+function checkMissions(r){
+  const m=[
+    S.dist>=6000 && r.M_fue<100,
+    S.npax>=400 && S.dist>=8000 && r.M_tot<350,
+    S.fin>=22 && S.eta>=0.55,
+    S.dist>=14000 && r.M_tot<500,
+  ];
+  m.forEach((ok,i)=>{
+    S.missions[i]=ok;
+    const el=document.getElementById('ms'+i);
+    const card=document.getElementById('mc'+i);
+    if(ok){
+      el.textContent='★ MISSION ACCOMPLIE +150 pts';
+      card.classList.add('done');
+    } else {
+      el.textContent='▷ EN ATTENTE';
+      card.classList.remove('done');
+    }
+  });
+}
+
+function computeScore(r){
+  let s=0;
+  s+=Math.max(0,100-(r.M_fue/r.M_tot)*200);
+  s+=(S.fin-8)*6;
+  s+=S.eta*120;
+  if(r.conv) s+=30;
+  s+=S.missions.filter(Boolean).length*150;
+  if(S.adv) s+=40;
+  s=Math.round(Math.max(0,s));
+  S.score=s;
+  document.getElementById('escore').textContent=s;
+}
+
+// ═══════════════════════════════════════════
+// LAUNCH
+// ═══════════════════════════════════════════
+function doLaunch(){
+  if(S.busy)return;
+  S.busy=true;
+  const btn=document.getElementById('lbtn');
+  btn.classList.add('sim');
+  btn.querySelector('span').textContent='⟳ CALCUL EN COURS...';
+
+  const r=runPhysics();
+  S.res=r;
+
+  animChart(r.hist);
+
+  // Update telemetry after animation done
+  setTimeout(()=>{
+    S.busy=false;
+    btn.classList.remove('sim');
+    btn.querySelector('span').textContent='▶ LANCER SIMULATION';
+    updateTelemetry(r);
+    if(window._p5inst) window._p5inst.triggerTakeoff(r);
+  }, NITER*100+200);
+}
+
+// ═══════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════
+setInterval(()=>{
+  document.getElementById('hdr-clk').textContent=new Date().toTimeString().slice(0,8);
+},1000);
+
+// ═══════════════════════════════════════════
+// P5.JS SKETCH
+// ═══════════════════════════════════════════
+const sketch=p=>{
+  let particles=[];
+  let planeX=0, targetX=0;
+  let shake=0, shakeMax=0;
+  let takeoffPct=0;
+  let engineOn=false;
+  let result=null;
+
+  p.setup=()=>{
+    const wrap=document.getElementById('cvs-wrap');
+    const cnv=p.createCanvas(wrap.offsetWidth, wrap.offsetHeight);
+    cnv.parent('cvs-wrap');
+    p.colorMode(p.HSB,360,100,100,100);
+  };
+
+  p.windowResized=()=>{
+    const wrap=document.getElementById('cvs-wrap');
+    p.resizeCanvas(wrap.offsetWidth,wrap.offsetHeight);
+  };
+
+  p.triggerTakeoff=(r)=>{
+    result=r;
+    engineOn=true;
+    shake=12; shakeMax=12;
+    targetX=p.width*0.45;
+    for(let i=0;i<80;i++) particles.push(mkParticle(p,p.width*0.5,p.height*0.54));
+    setTimeout(()=>{targetX=0;},2200);
+  };
+
+  p.draw=()=>{
+    p.background(218,30,4);
+    drawGrid(p);
+    drawSky(p);
+    drawRunway(p);
+
+    // Particles
+    particles=particles.filter(pt=>pt.alive);
+    if(engineOn && S.res){
+      const pw=S.res.P_MW;
+      const rate=p.map(pw,0,250,.5,2.5);
+      if(p.random()<rate){
+        const {ex1,ey1,ex2,ey2}=enginePos(p);
+        particles.push(mkParticle(p,ex1,ey1));
+        particles.push(mkParticle(p,ex2,ey2));
+      }
+    }
+    particles.forEach(pt=>{pt.update();pt.draw();});
+
+    // Plane movement
+    planeX+=(targetX-planeX)*0.04;
+    if(shake>0){shake*=0.93;}
+
+    p.push();
+    if(shake>0.3) p.translate(p.random(-shake,shake)*0.4,p.random(-shake,shake)*0.2);
+    drawPlane(p,planeX);
+    p.pop();
+
+    drawHUD(p);
+  };
+
+  function enginePos(p){
+    const npax=S.npax;
+    const bs=p.map(npax,100,500,.7,1.7);
+    const bl=200*bs, bh=32*bs;
+    const cx=p.width*.5+planeX, cy=p.height*.54;
+    return {
+      ex1:cx-bl*.22, ey1:cy+bh*.65,
+      ex2:cx+bl*.08, ey2:cy+bh*.65,
+    };
+  }
+
+  function drawGrid(p){
+    p.stroke(200,35,18,40);
+    p.strokeWeight(.8);
+    for(let x=0;x<p.width;x+=44) p.line(x,0,x,p.height);
+    for(let y=0;y<p.height;y+=44) p.line(0,y,p.width,y);
+  }
+
+  function drawSky(p){
+    // Horizon glow
+    const hy=p.height*.60;
+    for(let i=0;i<8;i++){
+      p.stroke(195,70,55,10-i);
+      p.strokeWeight(1);
+      p.line(0,hy+i*3,p.width,hy+i*3);
+    }
+    // Stars
+    p.noStroke();
+    p.fill(200,10,90,50);
+    for(let i=0;i<40;i++){
+      const sx=(p.noise(i*13.7)*p.width);
+      const sy=(p.noise(i*7.3)*hy*.85);
+      const sr=p.noise(i,p.frameCount*.005)*1.5;
+      p.ellipse(sx,sy,sr,sr);
+    }
+  }
+
+  function drawRunway(p){
+    const hy=p.height*.60;
+    p.noStroke();
+    p.fill(210,12,8);
+    p.rect(0,hy,p.width,p.height-hy);
+
+    // Asphalt texture
+    p.stroke(210,8,12,60);
+    p.strokeWeight(1);
+    for(let y=hy;y<p.height;y+=8) p.line(0,y,p.width,y);
+
+    // Center line dashes
+    const cy2=hy+(p.height-hy)*.42;
+    const dw=50,gap=35,speed=p.frameCount*4;
+    p.stroke(60,0,85,55);
+    p.strokeWeight(2);
+    for(let x=-(speed%(dw+gap));x<p.width;x+=dw+gap)
+      p.line(x,cy2,x+dw,cy2);
+
+    // Edge lights
+    for(let x=0;x<p.width;x+=60){
+      const lum=50+30*p.sin(p.frameCount*.08+x*.05);
+      p.fill(50,100,100,lum);
+      p.noStroke();
+      p.ellipse(x,hy+6,5,3);
+      p.ellipse(x,p.height-6,5,3);
+    }
+  }
+
+  function drawPlane(p,ox){
+    const npax=S.npax;
+    const bs=p.map(npax,100,500,.7,1.7);
+    const bl=200*bs, bh=32*bs;
+    const cx=p.width*.5+ox, cy=p.height*.54;
+
+    p.push();
+    p.translate(cx,cy);
+
+    // Engine glow halos
+    if(engineOn && S.res){
+      const pw=S.res.P_MW;
+      const gr=p.map(pw,0,250,25,65);
+      drawHalo(p,-bl*.22,bh*.65,gr);
+      drawHalo(p, bl*.08,bh*.65,gr);
+    }
+
+    // Shadow on runway
+    p.noStroke();
+    p.fill(0,0,0,25);
+    p.ellipse(0,bh*1.2,bl*.9,bh*.4);
+
+    // Wings
+    const ws=bl*.55*bs*.65;
+    p.fill(0,0,52,92);
+    p.stroke(195,60,80);
+    p.strokeWeight(1);
+    p.beginShape();
+    p.vertex(-bl*.12,-bh*.15);
+    p.vertex(-bl*.12-ws*.5,bh*.8);
+    p.vertex(-bl*.02,bh*.38);
+    p.vertex(bl*.12,-bh*.15);
+    p.endShape(p.CLOSE);
+
+    // Wing tip winglets
+    p.fill(190,50,80,80);
+    p.noStroke();
+    p.push();
+    p.translate(-bl*.12-ws*.5,bh*.8);
+    p.rotate(-.4);
+    p.rect(-2,-18,4,18,2);
+    p.pop();
+
+    // Horizontal stabilizer
+    p.fill(0,0,50,90);
+    p.stroke(195,60,75);
+    p.strokeWeight(.8);
+    p.beginShape();
+    p.vertex(-bl*.43,bh*.05);
+    p.vertex(-bl*.43-bl*.17,bh*.48);
+    p.vertex(-bl*.36,bh*.18);
+    p.endShape(p.CLOSE);
+
+    // Vertical tail
+    p.beginShape();
+    p.vertex(-bl*.44,-bh*.18);
+    p.vertex(-bl*.50,-bh*1.22);
+    p.vertex(-bl*.30,-bh*.18);
+    p.endShape(p.CLOSE);
+
+    // Fuselage gradient
+    p.noStroke();
+    const fg=p.drawingContext.createLinearGradient(-bl*.5,-bh*.5,bl*.5,bh*.5);
+    fg.addColorStop(0,'hsla(195,80%,72%,.92)');
+    fg.addColorStop(.4,'hsla(200,70%,45%,.9)');
+    fg.addColorStop(1,'hsla(210,60%,25%,.92)');
+    p.drawingContext.fillStyle=fg;
+    p.beginShape();
+    p.vertex(-bl*.50,0);
+    p.bezierVertex(-bl*.40,-bh*.55,-bl*.18,-bh*.65,0,-bh*.55);
+    p.bezierVertex( bl*.28,-bh*.45, bl*.48,-bh*.12, bl*.50,0);
+    p.bezierVertex( bl*.48, bh*.12, bl*.28, bh*.45,0, bh*.55);
+    p.bezierVertex(-bl*.18, bh*.65,-bl*.40, bh*.55,-bl*.50,0);
+    p.endShape();
+
+    // Nose cone
+    p.fill(195,60,85,.85);
+    p.noStroke();
+    p.ellipse(bl*.50,0,20*bs,16*bs);
+
+    // Engine pods
+    p.fill(210,30,40,90);
+    p.stroke(190,50,70);
+    p.strokeWeight(.8);
+    const podL=40*bs, podH=10*bs;
+    // Eng 1
+    p.ellipse(-bl*.22,bh*.65,podL,podH);
+    // Eng 2
+    p.ellipse( bl*.08,bh*.65,podL,podH);
+    // Engine intakes
+    p.fill(200,80,100,80);
+    p.noStroke();
+    p.ellipse(-bl*.22-podL*.48,bh*.65,8*bs,podH*.7);
+    p.ellipse( bl*.08-podL*.48,bh*.65,8*bs,podH*.7);
+
+    // Windows
+    const nw=Math.min(Math.round(npax/7),30);
+    for(let i=0;i<nw;i++){
+      const wx=-bl*.38+i*(bl*.74/nw);
+      const wa=i/nw;
+      const hue=p.map(wa,0,1,185,210);
+      p.fill(hue,60,95,75);
+      p.noStroke();
+      p.ellipse(wx,-bh*.14,5*bs,7*bs);
+    }
+
+    // Cockpit windows
+    p.fill(195,70,100,55);
+    p.noStroke();
+    p.ellipse(bl*.42,-bh*.18,22*bs,16*bs);
+    p.ellipse(bl*.44,-bh*.18,12*bs,10*bs);
+
+    // Livery stripe
+    p.stroke(120,90,95,65);
+    p.strokeWeight(1.5*bs);
+    p.noFill();
+    p.arc(0,0,bl*.8,bh*.6,p.PI*.08,p.PI*.92);
+
+    // INSA text
+    p.fill(120,80,90,90);
+    p.noStroke();
+    p.textFont('Share Tech Mono');
+    p.textSize(8.5*bs);
+    p.textAlign(p.CENTER,p.CENTER);
+    p.text('INSA',-bl*.32,0);
+
+    p.pop();
+  }
+
+  function drawHalo(p,ex,ey,r){
+    [[30,100,100],[20,100,100],[0,60,100]].forEach(([h,s,b],i)=>{
+      p.noStroke();
+      p.fill(h,s,b,22-i*6);
+      p.ellipse(ex,ey,r*(1+i*.6),r*(.5+i*.25));
+    });
+  }
+
+  function mkParticle(p,x,y){
+    return {
+      p,x,y,
+      vx:p.random(-3.5,-.5),
+      vy:p.random(-2,2),
+      life:p.random(35,85),
+      maxLife:0,
+      sz:p.random(4,16),
+      hue:p.random(10,45),
+      alive:true,
+      init(){this.maxLife=this.life;return this;},
+      update(){
+        this.x+=this.vx; this.y+=this.vy;
+        this.vx*=.97; this.vy*=.98;
+        this.life--; this.sz*=.968;
+        if(this.life<=0||this.sz<0.5)this.alive=false;
+      },
+      draw(){
+        const a=(this.life/this.maxLife)*85;
+        p.noStroke();
+        p.fill(this.hue,90,100,a);
+        p.ellipse(this.x,this.y,this.sz,this.sz*.55);
+        p.fill(40,20,100,a*.75);
+        p.ellipse(this.x,this.y,this.sz*.35,this.sz*.22);
+      },
+    }.init();
+  }
+
+  function drawHUD(p){
+    p.noStroke();
+    p.fill(195,55,90,65);
+    p.textFont('Share Tech Mono');
+    p.textSize(9.5);
+    p.textAlign(p.LEFT,p.TOP);
+
+    if(S.res){
+      const r=S.res;
+      p.text(`M_TOT  : ${r.M_tot.toFixed(1)} t`,14,16);
+      p.text(`CARB   : ${r.M_fue.toFixed(1)} t`,14,29);
+      p.text(`PWR    : ${r.P_MW.toFixed(1)} MW`,14,42);
+      p.text(`FINESSE: ${S.fin}`,14,55);
+    } else {
+      p.fill(195,30,65,50);
+      p.text('EN ATTENTE DE SIMULATION',14,18);
+    }
+
+    // Corner brackets
+    const m=10,s=22;
+    p.stroke(190,70,80,45);
+    p.strokeWeight(1.5);
+    p.noFill();
+    [[0,0,1,1],[p.width,0,-1,1],[0,p.height,1,-1],[p.width,p.height,-1,-1]].forEach(([x,y,sx,sy])=>{
+      p.line(x+m*sx,y+m*sy,x+(m+s)*sx,y+m*sy);
+      p.line(x+m*sx,y+m*sy,x+m*sx,y+(m+s)*sy);
+    });
+
+    // Npax badge
+    p.noStroke();
+    p.fill(195,60,14,80);
+    p.rect(p.width-90,p.height-36,80,26,3);
+    p.fill(120,80,90,90);
+    p.textAlign(p.CENTER,p.CENTER);
+    p.textSize(9);
+    p.text(`${S.npax} PAX`,p.width-50,p.height-23);
+  }
+
+  window._p5inst={triggerTakeoff:r=>p.triggerTakeoff(r)};
+};
+
+// ═══════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════
+window.addEventListener('load',()=>{
+  initChart();
+  new p5(sketch);
+  // Auto-run after fonts/canvas ready
+  setTimeout(doLaunch, 700);
+});
+</script>
+</body>
+</html>
