@@ -75,8 +75,6 @@ Conception et réalisation de A à Z d'un prototype de bras robotique imprimé e
 ## 📝 Description
 Conception et fabrication d'un mini-véhicule robotique contrôlable depuis n'importe quel smartphone ou ordinateur, sans application tierce. Le cœur du robot (un ESP32) génère son propre réseau Wi-Fi et héberge une interface Web tactile. Ce projet combine mécanique (découpe laser et impression 3D), électronique et développement web embarqué.
 
-📸 **[Insérer ici une photo de la voiture découpée au laser]**
-
 ---
 
 ## 🚀 Fonctionnalités
